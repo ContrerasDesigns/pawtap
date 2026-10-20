@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawTap System</title>
+    <style>
+      :root {
+        --primary-dark: #0a1128;
+        --primary-blue: #007bff;
+        --danger-red: #dc3545;
+        --bg-color: #f4f7f6;
+      }
+      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: var(--bg-color); }
+      
+      .card { background: rgba(255, 255, 255, 0.98); padding: 35px 25px; border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); text-align: center; max-width: 450px; width: 100%; box-sizing: border-box; }
+      .logo { max-width: 200px; margin-bottom: 20px; }
+
+      #loadingSpinner { font-size: 1.3rem; font-weight: bold; color: var(--primary-dark); background: white; padding: 25px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+      .spinner-circle { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-blue); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+      #setupWizard h1 { color: var(--primary-dark); margin-bottom: 24px; font-size: 1.8rem; }
+      #setupWizard h2 { font-size: 1.4rem; margin-bottom: 20px; color: var(--primary-dark); }
+      input[type="text"], input[type="tel"], input[type="email"], input[type="file"] { width: 100%; padding: 14px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1.1rem; margin-bottom: 10px; }
+      .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; margin-bottom: 20px; }
+      .checkbox-label { background: #f4f7f6; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1rem; transition: opacity 0.3s; }
+      .checkbox-label input { transform: scale(1.3); cursor: inherit; }
+      .nav-buttons { display: flex; gap: 12px; margin-top: 20px; }
+      .nav-buttons button { background-color: var(--primary-blue); color: white; border: none; padding: 14px 24px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; flex: 1; transition: background-color 0.3s, opacity 0.3s; }
+      .nav-buttons button:hover:not(:disabled) { background-color: #0056b3; }
+      .nav-buttons button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .nav-buttons button.back-btn { background-color: #e0e0e0; color: #333; }
+      .nav-buttons button.back-btn:hover:not(:disabled) { background-color: #ccc; }
+      
+      .step { display: none; animation: fadeIn 0.4s ease-in-out; position: relative; }
+      .step.active { display: block; }
+      
+      .autocomplete-items { position: absolute; border: 1px solid #d4d4d4; border-bottom: none; border-top: none; z-index: 99; top: 85px; left: 0; right: 0; border-radius: 0 0 8px 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+      .autocomplete-items div { padding: 12px; cursor: pointer; background-color: #fff; border-bottom: 1px solid #d4d4d4; font-size: 0.95rem; text-align: left; line-height: 1.4; }
+      .autocomplete-items div:hover { background-color: #e9e9e9; }
+
+      .profile-pic { width: 160px; height: 160px; border-radius: 50%; object-fit: cover; border: 5px solid var(--primary-blue); margin: 0 auto 20px; display: none; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+      #profileView h2 { color: #333; margin-top: 0; margin-bottom: 20px; line-height: 1.3; font-size: 1.8rem; font-weight: 700; }
+      #profileView h3 { color: #000000; font-weight: 900; text-transform: uppercase; margin-top: 0; margin-bottom: 25px; font-size: 2rem; letter-spacing: 1px; display: none; }
+      #profileView p.subtitle { color: #444; margin-bottom: 25px; line-height: 1.5; font-size: 1.2rem; }
+      
+      .info-section { background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 25px; text-align: left; display: none; border: 1px solid #e9ecef; }
+      .info-item { margin-bottom: 12px; font-size: 1.15rem; color: #333; line-height: 1.5; }
+      .info-item strong { color: var(--primary-dark); font-weight: 700; }
+
+      .action-btn { padding: 18px 20px; font-size: 1.15rem; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; display: none; width: 100%; margin: 12px 0; text-decoration: none; box-sizing: border-box; text-align: center; transition: opacity 0.2s, transform 0.1s; }
+      .action-btn:active { transform: scale(0.98); }
+      .call-btn { background: var(--primary-dark); color: white; }
+      .text-btn { background: var(--primary-blue); color: white; }
+      .email-btn { background: var(--danger-red); color: white; }
+      
+      .profile-footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; }
+      .profile-footer img { max-width: 140px; opacity: 0.8; }
+
+      .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.2s ease-in-out; }
+      .modal-card { background: white; padding: 35px 25px; border-radius: 12px; max-width: 380px; width: 90%; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+      .modal-card h3 { color: var(--primary-dark); margin-top: 0; margin-bottom: 15px; font-size: 1.6rem; }
+      .modal-card p { color: #444; margin-bottom: 25px; font-size: 1.2rem; line-height: 1.5; }
+      .modal-btn { padding: 16px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; width: 100%; margin-bottom: 12px; color: white; }
+      .btn-allow { background-color: #28a745; }
+      .btn-skip { background-color: #6c757d; }
+
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+  </head>
+  <body>
+    
+    <div id="loadingSpinner">
+      <div class="spinner-circle" id="spinnerAnim"></div>
+      <span id="loadingText">Connecting to PawTap...</span>
+    </div>
+
+    <!-- 1. SETUP WIZARD -->
+    <div class="card" id="setupWizard" style="display:none;">
+      <img src="PawTapFinal.png" alt="PawTap Logo" class="logo" onerror="this.style.display='none';">
+      
+      <form id="pawtapForm" onsubmit="return false;">
+        <div class="step active" id="step-0">
+          <h1>Let's get your PawTap set up!</h1>
+          <p style="color: #555; margin-bottom: 20px;" id="tagIdDisplay">Tag ID: </p>
+          <button type="button" class="action-btn text-btn" style="display:block;" onclick="nextStep()">Continue</button>
+        </div>
+
+        <div class="step" id="step-1">
+          <h2 id="label-b3">Pet Name</h2>
+          <input type="text" id="b3" required oninput="validateStep(1)">
+          <div class="nav-buttons">
+            <button class="back-btn" type="button" onclick="prevStep()">Back</button>
+            <button type="button" id="btn-continue-1" onclick="nextStep()" disabled>Continue</button>
+          </div>
+        </div>
+
+        <div class="step" id="step-2">
+          <h2 id="label-b4">Pet Photo</h2>
+          <input type="file" id="b4" accept="image/*" required onchange="validateStep(2)">
+          <div class="nav-buttons">
+            <button class="back-btn" type="button" onclick="prevStep()">Back</button>
+            <button type="button" id="btn-continue-2" onclick="nextStep()" disabled>Continue</button>
+          </div>
+        </div>
+
+        <div class="step" id="step-3">
+          <h2 id="label-b5">Mannerisms</h2>
+          <div class="checkbox-grid">
+            <label class="checkbox-label" id="label-mann-unknown"><input type="checkbox" name="mannerism" id="mann-unknown" value="Mannerisms Unknown" checked onchange="validateStep(3)"> Mannerisms Unknown</label>
+            <label class="checkbox-label"><input type="checkbox" name="mannerism" class="mann-other" value="Friendly" onchange="handleOtherMannerisms()"> Friendly</label>
+            <label class="checkbox-label"><input type="checkbox" name="mannerism" class="mann-other" value="Timid/Shy" onchange="handleOtherMannerisms()"> Timid / Shy</label>
+            <label class="checkbox-label"><input type="checkbox" name="mannerism" class="mann-other" value="Good w/ Kids" onchange="handleOtherMannerisms()"> Good w/ Kids</label>
+            <label class="checkbox-label"><input type="checkbox" name="mannerism" class="mann-other" value="Good w/ Dogs" onchange="handleOtherMannerisms()"> Good w/ Dogs</label>
+            <label class="checkbox-label"><input type="checkbox" name="mannerism" class="mann-other" value="Needs Meds" onchange="handleOtherMannerisms()"> Needs Meds</label>
+            <label class="checkbox-label"><input type="checkbox" name="mannerism" class="mann-other" value="Do Not Feed" onchange="handleOtherMannerisms()"> Do Not Feed</label>
+            <label class="checkbox-label"><input type="checkbox" name="mannerism" class="mann-other" value="Deaf/Blind" onchange="handleOtherMannerisms()"> Deaf / Blind</label>
+          </div>
+          <div class="nav-buttons">
+            <button class="back-btn" type="button" onclick="prevStep()">Back</button>
+            <button type="button" id="btn-continue-3" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <div class="step" id="step-4">
+          <h2 id="label-b6">Home Address</h2>
+          <input type="text" id="b6" required placeholder="Start typing your address..." autocomplete="off" oninput="validateStep(4)">
+          <div class="nav-buttons">
+            <button class="back-btn" type="button" onclick="prevStep()">Back</button>
+            <button type="button" id="btn-continue-4" onclick="nextStep()" disabled>Continue</button>
+          </div>
+        </div>
+
+        <div class="step" id="step-5">
+          <h2 id="label-b7">Owner Name</h2>
+          <input type="text" id="b7" required oninput="validateStep(5)">
+          <div class="nav-buttons">
+            <button class="back-btn" type="button" onclick="prevStep()">Back</button>
+            <button type="button" id="btn-continue-5" onclick="nextStep()" disabled>Continue</button>
+          </div>
+        </div>
+
+        <div class="step" id="step-6">
+          <h2 id="label-b8">Phone Number</h2>
+          <input type="tel" id="b8" required placeholder="Enter number..." oninput="validateStep(6)">
+          <input type="tel" id="b8_confirm" required placeholder="Re-enter to confirm..." oninput="validateStep(6)" style="margin-top: 10px;">
+          <div class="nav-buttons">
+            <button class="back-btn" type="button" onclick="prevStep()">Back</button>
+            <button type="button" id="btn-continue-6" onclick="nextStep()" disabled>Continue</button>
+          </div>
+        </div>
+
+        <div class="step" id="step-7">
+          <h2 id="label-b9">Email Address</h2>
+          <input type="email" id="b9" required placeholder="Enter email..." oninput="validateStep(7)">
+          <input type="email" id="b9_confirm" required placeholder="Re-enter to confirm..." oninput="validateStep(7)" style="margin-top: 10px;">
+          <div class="nav-buttons">
+            <button class="back-btn" type="button" onclick="prevStep()">Back</button>
+            <button type="button" id="btn-continue-7" onclick="nextStep()" disabled>Continue</button>
+          </div>
+        </div>
+
+        <div class="step" id="step-8">
+          <h1>All Set!</h1>
+          <p style="margin-bottom: 24px; font-size: 1.1rem; color: #444;">You've completed all the steps. Click below to securely save and activate this PawTap profile.</p>
+          <div class="nav-buttons">
+            <button class="back-btn" type="button" onclick="prevStep()">Back</button>
+            <button type="button" id="submitBtn" onclick="submitForm()">Save Profile & Activate</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- 2. ACTIVATED PROFILE FINDER UI -->
+    <div class="card" id="profileView" style="display:none;">
+      <h2 id="greetingTitle">Thank you for finding me!</h2>
+      <img id="profilePetPhoto" class="profile-pic" alt="Pet Photo" onerror="this.style.display='none';" />
+      <h3 id="petNameDisplay"></h3> 
+      <p class="subtitle" id="subtitleText">Please use the buttons below to reunite me with my owner.</p>
+      
+      <div id="infoSection" class="info-section">
+        <div id="infoMannerisms" class="info-item"></div>
+        <div id="infoAddress" class="info-item"></div>
+      </div>
+
+      <a href="#" id="callBtn" class="action-btn call-btn">Call Owner</a>
+      <button id="textBtn" class="action-btn text-btn">Text Owner</button>
+      <button id="emailBtn" class="action-btn email-btn">Email Owner</button>
+      
+      <div class="profile-footer">
+        <img src="PawTapFinal.png" alt="PawTap Logo" onerror="this.style.display='none';">
+      </div>
+    </div>
+
+    <!-- Location Request Modal -->
+    <div id="locationModal" class="modal-overlay">
+      <div class="modal-card">
+        <h3>Share Location?</h3>
+        <p id="modalText">Please allow access to your location to help reunite me with my owner.</p>
+        <button id="allowLocationBtn" class="modal-btn btn-allow">Allow Location Access</button>
+        <button id="skipLocationBtn" class="modal-btn btn-skip">Skip / Send Without Location</button>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "https://script.google.com/macros/s/AKfycbz7ui9OMznxWl9EaoKKoyuWOZ2m9B_dGt_gxPEixYYxjaMU2-76WmD99l7X9nNnUfnVSQ/exec"; 
+
+      // Extract Tag ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const activeTagId = urlParams.get('id');
+
+      let petNameCache = "A LOST PET";
+      let ownerPhoneCache = "";
+      let ownerEmailCache = "";
+      let pendingAction = null; 
+      let currentStep = 0;
+      const totalSteps = 8;
+
+      async function apiRequest(payload) {
+        payload.tagId = activeTagId; 
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        return await response.json();
+      }
+
+      window.onload = async function() {
+        if (!activeTagId) {
+          document.getElementById('loadingText').innerHTML = "Invalid PawTap Tag.<br><br><span style='font-size:1rem;font-weight:normal;'>No ID found.</span>";
+          document.getElementById('spinnerAnim').style.display = 'none';
+          return;
+        }
+
+        try {
+          const statusResult = await apiRequest({ action: 'checkStatus' });
+          
+          if (statusResult.success) {
+            if (statusResult.isEmpty) {
+              document.getElementById('loadingSpinner').style.display = 'none';
+              document.getElementById('tagIdDisplay').innerText = "Tag ID: " + activeTagId;
+              document.getElementById('setupWizard').style.display = 'block';
+            } else {
+              loadAndShowProfile();
+            }
+          } else {
+            document.getElementById('loadingText').innerHTML = "Tag Registration Error.<br><br><span style='font-size:1rem;font-weight:normal;'>" + statusResult.error + "</span>";
+            document.getElementById('spinnerAnim').style.display = 'none';
+          }
+        } catch (error) {
+          document.getElementById('loadingText').innerHTML = "Error connecting to server. Please check your connection.";
+          document.getElementById('spinnerAnim').style.display = 'none';
+        }
+      };
+
+      // --- 1. SETUP WIZARD LOGIC ---
+      function handleOtherMannerisms() {
+        const others = document.querySelectorAll('.mann-other');
+        const unknownCb = document.getElementById('mann-unknown');
+        const unknownLabel = document.getElementById('label-mann-unknown');
+        if (Array.from(others).some(cb => cb.checked)) {
+          unknownCb.checked = false; unknownCb.disabled = true; unknownLabel.style.opacity = '0.5'; unknownLabel.style.cursor = 'not-allowed';
+        } else {
+          unknownCb.disabled = false; unknownLabel.style.opacity = '1'; unknownLabel.style.cursor = 'pointer';
+        }
+        validateStep(3); 
+      }
+
+      function validateStep(stepIndex) {
+        const continueBtn = document.getElementById('btn-continue-' + stepIndex);
+        if (!continueBtn) return; 
+
+        if (stepIndex === 2) { continueBtn.disabled = document.getElementById('b4').files.length === 0; }
+        else if (stepIndex === 3) { continueBtn.disabled = document.querySelectorAll('input[name="mannerism"]:checked').length === 0; }
+        else if (stepIndex === 6) { 
+          const b8 = document.getElementById('b8').value.trim(); const b8c = document.getElementById('b8_confirm').value.trim();
+          continueBtn.disabled = (b8 === '' || b8 !== b8c);
+        } else if (stepIndex === 7) { 
+          const b9 = document.getElementById('b9').value.trim(); const b9c = document.getElementById('b9_confirm').value.trim();
+          continueBtn.disabled = (b9 === '' || b9 !== b9c);
+        } else {
+          const textInput = document.getElementById('step-' + stepIndex).querySelector('input[type="text"], input[type="tel"], input[type="email"]');
+          if (textInput) continueBtn.disabled = textInput.value.trim().length === 0;
+        }
+      }
+
+      function showStep(stepIndex) {
+        document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+        document.getElementById('step-' + stepIndex).classList.add('active');
+        validateStep(stepIndex); 
+      }
+
+      function prevStep() { if (currentStep > 0) { currentStep--; showStep(currentStep); } }
+      function nextStep() {
+        if (currentStep === 1) document.getElementById('label-b4').innerText = document.getElementById('b3').value + "'s Photo (Upload)";
+        if (currentStep < totalSteps) { currentStep++; showStep(currentStep); }
+      }
+
+      function getSelectedMannerisms() {
+        return Array.from(document.querySelectorAll('input[name="mannerism"]:checked')).map(cb => cb.value).join(", ");
+      }
+
+      function getBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader(); reader.readAsDataURL(file);
+          reader.onload = () => resolve({ data: reader.result.split(',')[1], mimeType: file.type });
+          reader.onerror = error => reject(error);
+        });
+      }
+
+      const addressInput = document.getElementById('b6');
+      let addressTimeout = null;
+      addressInput.addEventListener('input', function() {
+        clearTimeout(addressTimeout); const val = this.value; closeAllLists(); if (!val) return false;
+        addressTimeout = setTimeout(async () => {
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5&countrycodes=us`);
+            const data = await response.json();
+            if (data && data.length > 0) {
+              const list = document.createElement("DIV"); list.setAttribute("id", this.id + "autocomplete-list"); list.setAttribute("class", "autocomplete-items");
+              this.parentNode.appendChild(list);
+              data.forEach(item => {
+                const div = document.createElement("DIV"); div.innerHTML = item.display_name;
+                div.addEventListener("click", function() { addressInput.value = item.display_name; validateStep(4); closeAllLists(); });
+                list.appendChild(div);
+              });
+            }
+          } catch (error) {}
+        }, 500); 
+      });
+      function closeAllLists(elmnt) { const x = document.getElementsByClassName("autocomplete-items"); for (let i = 0; i < x.length; i++) { if (elmnt != x[i] && elmnt != addressInput) x[i].parentNode.removeChild(x[i]); } }
+      document.addEventListener("click", function (e) { closeAllLists(e.target); });
+
+      async function submitForm() {
+        const btn = document.getElementById('submitBtn'); btn.innerText = 'Saving Profile...'; btn.disabled = true;
+        try {
+          const fileInput = document.getElementById('b4'); let imageData = null;
+          if (fileInput.files.length > 0) imageData = await getBase64(fileInput.files[0]);
+
+          const payload = { action: 'submitForm', b3: document.getElementById('b3').value, b4_image: imageData, b5: getSelectedMannerisms(), b6: document.getElementById('b6').value, b7: document.getElementById('b7').value, b8: document.getElementById('b8').value, b9: document.getElementById('b9').value };
+          const result = await apiRequest(payload);
+
+          if (result.success) {
+            document.getElementById('setupWizard').style.display = 'none';
+            document.getElementById('loadingText').innerHTML = "Activating PawTap...";
+            document.getElementById('spinnerAnim').style.display = 'block'; document.getElementById('loadingSpinner').style.display = 'block';
+            setTimeout(loadAndShowProfile, 1500); 
+          } else {
+            alert('Error saving data: ' + result.error); btn.innerText = 'Save Profile & Activate'; btn.disabled = false;
+          }
+        } catch (error) { alert('Transmission error.'); btn.innerText = 'Save Profile & Activate'; btn.disabled = false; }
+      }
+
+      // --- 2. ACTIVATED PROFILE LOGIC ---
+      async function loadAndShowProfile() {
+        try {
+          const result = await apiRequest({ action: 'getProfile' });
+          
+          if (result.success && result.data) {
+            const contact = result.data;
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('profileView').style.display = 'block';
+            
+            if (contact.petName) {
+              petNameCache = String(contact.petName).toUpperCase();
+              document.getElementById('petNameDisplay').innerHTML = petNameCache;
+              document.getElementById('petNameDisplay').style.display = "block";
+              document.getElementById('modalText').innerHTML = "Please allow access to your location to help reunite " + contact.petName + " with their owner.";
+            }
+
+            if (contact.ownerName && String(contact.ownerName).trim() !== "") {
+              document.getElementById('subtitleText').innerHTML = "Please use the buttons below to reunite me with my owner, " + contact.ownerName + ".";
+            }
+            
+            if (contact.photoUrl && String(contact.photoUrl).trim() !== "") {
+              var petPhoto = document.getElementById('profilePetPhoto');
+              let finalUrl = String(contact.photoUrl);
+              if (finalUrl.includes('drive.google.com/uc?id=')) finalUrl = finalUrl.replace('uc?id=', 'thumbnail?id=') + '&sz=w400';
+              petPhoto.src = finalUrl; petPhoto.style.display = "block";
+            }
+
+            let hasExtraInfo = false;
+            const appendInfo = (id, label, value) => {
+              let strVal = (value !== null && value !== undefined) ? String(value) : "";
+              if (strVal.trim() !== "") { document.getElementById(id).innerHTML = "<strong>" + label + ":</strong> " + strVal; hasExtraInfo = true; }
+            };
+            
+            appendInfo('infoMannerisms', 'Mannerisms', contact.mannerisms);
+            appendInfo('infoAddress', 'Home Address', contact.address);
+            if (hasExtraInfo) document.getElementById('infoSection').style.display = "block";
+
+            if (contact.phone && String(contact.phone).trim() !== "") {
+              ownerPhoneCache = String(contact.phone);
+              let callBtn = document.getElementById('callBtn'); callBtn.href = "tel:" + ownerPhoneCache; callBtn.innerHTML = "Call " + (contact.ownerName || "Owner"); callBtn.style.display = "block";
+              let textBtn = document.getElementById('textBtn'); textBtn.innerHTML = "Text " + (contact.ownerName || "Owner"); textBtn.style.display = "block";
+            }
+
+            if (contact.email && String(contact.email).trim() !== "") {
+              ownerEmailCache = String(contact.email);
+              let emailBtn = document.getElementById('emailBtn'); emailBtn.innerHTML = "Email " + (contact.ownerName || "Owner"); emailBtn.style.display = "block";
+            }
+          }
+        } catch (error) {
+          document.getElementById('loadingText').innerHTML = "Error loading profile data."; document.getElementById('spinnerAnim').style.display = 'none';
+        }
+      }
+
+      // Profile Finder Communication Buttons
+      document.getElementById('textBtn').addEventListener('click', function() { pendingAction = 'text'; document.getElementById('locationModal').style.display = 'flex'; });
+      document.getElementById('emailBtn').addEventListener('click', function() { pendingAction = 'email'; document.getElementById('locationModal').style.display = 'flex'; });
+
+      document.getElementById('allowLocationBtn').addEventListener('click', function() {
+        this.innerHTML = "Locating..."; 
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function(position) {
+              document.getElementById('locationModal').style.display = 'none'; document.getElementById('allowLocationBtn').innerHTML = "Allow Location Access";
+              triggerCommunication(position.coords.latitude, position.coords.longitude);
+            },
+            function(error) {
+              document.getElementById('locationModal').style.display = 'none'; document.getElementById('allowLocationBtn').innerHTML = "Allow Location Access";
+              triggerCommunication(null, null); 
+            }
+          );
+        } else {
+          document.getElementById('locationModal').style.display = 'none'; triggerCommunication(null, null);
+        }
+      });
+
+      document.getElementById('skipLocationBtn').addEventListener('click', function() { document.getElementById('locationModal').style.display = 'none'; triggerCommunication(null, null); });
+
+      function triggerCommunication(lat, lng) {
+        let gpsText = (lat && lng) ? " We are currently at: https://maps.google.com/?q=" + lat + "," + lng : " Please contact me for our location.";
+        let messageBody = encodeURIComponent("URGENT: I found " + petNameCache + "!" + gpsText);
+        let subjectLine = encodeURIComponent("URGENT: " + petNameCache + " HAS BEEN FOUND");
+
+        if (pendingAction === 'text' && ownerPhoneCache) window.location.href = "sms:" + ownerPhoneCache + "?body=" + messageBody;
+        else if (pendingAction === 'email' && ownerEmailCache) window.location.href = "mailto:" + ownerEmailCache + "?subject=" + subjectLine + "&body=" + messageBody;
+        pendingAction = null; 
+      }
+    </script>
+  </body>
+</html>
